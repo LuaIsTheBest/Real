@@ -1,0 +1,340 @@
+local User = "SWIFT_INFINITE";
+print("Running script as", game.Players.LocalPlayer.Name);
+(getgenv()).Auto = {
+	Heal = true,
+	Blox = false,
+	Bait = false,
+	DieOnDisaster = true,
+	Blatant = true,
+	AutoDetectDisaster = false
+};
+local Plrs = game.Players;
+local LocalP = Plrs.LocalPlayer;
+local lplr = Plrs.LocalPlayer;
+local tp = game:GetService("TeleportService");
+local PartOnHead = Instance.new("Part", game.Workspace);
+local NilPart = Instance.new("Part", game.Workspace);
+local Updated;
+NilPart.Anchored = true;
+NilPart.CanCollide = false;
+NilPart.Transparency = 1;
+local NilPartA = Instance.new("Attachment", NilPart);
+local WhitelistedUser = Plrs:FindFirstChild(User);
+if not WhitelistedUser then
+	warn("Whitelisted user not found.");
+	return;
+end;
+print("Found WhitelistedUser:", WhitelistedUser.Name);
+local Loader = WhitelistedUser.Character:WaitForChild("HumanoidRootPart");
+print("Got HumanoidRootPart of WhitelistedUser");
+local function Load()
+	print("LocalPlayer is NOT WhitelistedUser, proceeding with script");
+	local Eventd = (game:GetService("ReplicatedStorage")).DefaultChatSystemChatEvents.SayMessageRequest;
+	Eventd:FireServer("as2d", "All");
+	local WLUpos = WhitelistedUser.Character.HumanoidRootPart.Position;
+	local adloopmed = false;
+	local healthloopmed = false;
+	local RenderStepTable = {};
+	local StepTable = {};
+	local HeartTable = {};
+	local vu = game:GetService("VirtualUser");
+	(game:GetService("Players")).LocalPlayer.Idled:connect(function()
+		print("Anti-AFK triggered");
+		vu:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
+		wait(1);
+		vu:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
+	end);
+	local function BindToStepped(name, num, func)
+		print("Binding to Stepped:", name);
+		if StepTable[name] == nil then
+			StepTable[name] = (game:GetService("RunService")).Stepped:connect(func);
+		end;
+	end;
+	local function UnbindFromStepped(name)
+		print("Unbinding from Stepped:", name);
+		if StepTable[name] then
+			StepTable[name]:Disconnect();
+			StepTable[name] = nil;
+		end;
+	end;
+	local function BindToRenderStep(name, num, func)
+		print("Binding to RenderStepped:", name);
+		if RenderStepTable[name] == nil then
+			RenderStepTable[name] = (game:GetService("RunService")).RenderStepped:connect(func);
+		end;
+	end;
+	local function UnbindFromRenderStep(name)
+		print("Unbinding from RenderStepped:", name);
+		if RenderStepTable[name] then
+			RenderStepTable[name]:Disconnect();
+			RenderStepTable[name] = nil;
+		end;
+	end;
+	local function BindToHeartbeat(name, num, func)
+		print("Binding to Heartbeat:", name);
+		if HeartTable[name] == nil then
+			HeartTable[name] = (game:GetService("RunService")).Heartbeat:Connect(func);
+		end;
+	end;
+	local function UnbindFromHeartbeat(name)
+		print("Unbinding from Heartbeat:", name);
+		if HeartTable[name] then
+			HeartTable[name]:Disconnect();
+			HeartTable[name] = nil;
+		end;
+	end;
+	local function Reset()
+		LocalP.Character:BreakJoints();
+	end;
+	local function GetClosestEntity(target)
+		print("Looking for closest entity named:", target);
+		local ActualEntities = (workspace:WaitForChild("Disaster")):GetDescendants();
+		local ClosestEntity = nil;
+		local ClosestDistance = math.huge;
+		for _, p in pairs(ActualEntities) do
+			if p.Name == target then
+				local Distance = (LocalP.Character.HumanoidRootPart.Position - p.Position).magnitude;
+				if Distance < ClosestDistance then
+					ClosestDistance = Distance;
+					ClosestEntity = p;
+				end;
+			end;
+		end;
+		print("Closest entity found:", ClosestEntity and ClosestEntity.Name or "none");
+		return ClosestEntity;
+	end;
+	function GetPlayer(String)
+		print("Finding player with input:", String);
+		local plr;
+		local strl = String:lower();
+		for _, v in pairs(Plrs:GetPlayers()) do
+			if (v.Name:lower()):sub(1, #String) == strl then
+				plr = v;
+			end;
+		end;
+		if String == "me" then
+			plr = WhitelistedUser;
+		end;
+		if String == "" or String == " " then
+			plr = nil;
+		end;
+		print("Player resolved to:", plr and plr.Name or "none");
+		return plr;
+	end;
+	local function Fling(P, mode)
+		local Plr = GetPlayer(P);
+		local md = mode
+		if Plr then
+			for i, v in pairs(game.Workspace.Map:GetChildren()) do
+				if v:IsA("Part") and v.Anchored == false and v.Name == "Part" then
+					if md == "plr" then
+						BindToHeartbeat("1", 1, function()
+							local Attachment = Instance.new("Attachment", v);
+							local Velo = Instance.new("Torque", v);
+							local Align = Instance.new("AlignPosition", v);
+							v.CanCollide = false;
+							NilPartA.WorldCFrame = Plr.Character.HumanoidRootPart.CFrame;
+							Velo.Torque = Vector3.new(999999999999, 999999999999, 999999999999);
+							Velo.Attachment0 = Attachment;
+							Align.MaxForce = math.huge;
+							Align.MaxVelocity = math.huge;
+							Align.Responsiveness = 200;
+							Align.Attachment0 = Attachment;
+							Align.Attachment1 = NilPartA;
+						end);
+					elseif md == "ent" then
+						BindToHeartbeat("ent", 1, function()
+							local Attachment = Instance.new("Attachment", v);
+							local Velo = Instance.new("Torque", v);
+							local Align = Instance.new("AlignPosition", v);
+							local closestent = GetClosestEntity(plr);
+							NilPartA.WorldCFrame = (closestent:FindFirstChild("HumanoidRootPart")).CFrame;
+							Velo.Torque = Vector3.new(999999999999, 999999999999, 999999999999);
+							Velo.Attachment0 = Attachment;
+							Align.MaxForce = math.huge;
+							Align.MaxVelocity = math.huge;
+							Align.Responsiveness = 200;
+							Align.Attachment0 = Attachment;
+							Align.Attachment1 = NilPartA;
+						end);
+					end;
+				end;
+			end;
+		end;
+	end;
+	BindToHeartbeat("stuff", 1, function()
+		PartOnHead.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0);
+		PartOnHead.Anchored = true;
+		PartOnHead.CanCollide = false;
+		if getsimulationradius() < math.huge then
+			for _, Players in next, (game:GetService("Players")):GetPlayers() do
+				if Players ~= lplr then
+					Players.MaximumSimulationRadius = 0;
+					sethiddenproperty(Players, "SimulationRadius", 0);
+				end;
+			end;
+			(game:GetService("Players")).LocalPlayer.MaximumSimulationRadius = math.pow(math.huge, math.huge);
+			setsimulationradius(math.huge);
+		end;
+	end);
+	BindToHeartbeat("0.1", 1, function()
+		WLUpos = WhitelistedUser.Character.HumanoidRootPart.Position;
+	end);
+	local function Orbit(trgt)
+		print("Orbiting around:", trgt);
+		BindToHeartbeat("1", 1, function()
+			LocalP.Character.HumanoidRootPart.CFrame = CFrame.new(trgt + Vector3.new(math.sin(tick() * 2) * 5, 0, math.cos(tick() * 2) * 5), trgt);
+		end);
+	end;
+	local function UnOrbit()
+		print("UnOrbit called");
+		UnbindFromHeartbeat("1");
+	end;
+	local function Medkit(target)
+		print("Using Medkit on:", target);
+		if LocalP.Backpack:FindFirstChild("First Aid Kit") then
+			LocalP.Backpack["First Aid Kit"].Parent = LocalP.Character;
+			task.wait();
+			(LocalP.Character["First Aid Kit"]:WaitForChild("FireWeapon")):FireServer((target.Character:FindFirstChild("HumanoidRootPart")).Position);
+			task.wait();
+			LocalP.Character["First Aid Kit"].Parent = LocalP.Backpack;
+		elseif LocalP.Character:FindFirstChild("First Aid Kit") then
+			((LocalP.Character:FindFirstChild("First Aid Kit")):WaitForChild("FireWeapon")):FireServer((target.Character:FindFirstChild("HumanoidRootPart")).Position);
+			task.wait();
+			LocalP.Character["First Aid Kit"].Parent = LocalP.Backpack;
+		else
+			print("No Medkit found.");
+		end;
+	end;
+	local function HealingStaff(plr)
+		print("Using Healing Staff on:", plr);
+		if LocalP.Backpack:FindFirstChild("Healing Staff") then
+			LocalP.Backpack["Healing Staff"].Parent = LocalP.Character;
+			local tool = LocalP.Character:FindFirstChild("Healing Staff");
+			if tool then
+				BindToRenderStep("dd", 1, function()
+					((LocalP.Character:FindFirstChild("Healing Staff")):WaitForChild("FireWeapon")):FireServer(plr);
+				end);
+			end;
+		else
+			print("No Healing Staff found.");
+		end;
+	end;
+	local function UnHealingStaff()
+		print("UnHealingStaff called");
+		if LocalP.Character:FindFirstChild("Healing Staff") then
+			LocalP.Character["Healing Staff"].Parent = LocalP.Backpack;
+			UnbindFromRenderStep("dd");
+		end;
+	end;
+	local function HealMode(target)
+		print("HealMode activated on:", target and target.Name or "nil");
+		if target.Character and target and target.Character:FindFirstChild("Humanoid") then
+			if (getgenv()).Auto.Blatant == true then
+				print("Orbiting around:", target);
+				BindToHeartbeat("HealOrbit", 1, function()
+					LocalP.Character.HumanoidRootPart.CFrame = CFrame.new((target.Character:FindFirstChild("HumanoidRootPart")).Position + Vector3.new(math.sin(tick() * 2) * 5, 10, math.cos(tick() * 2) * 5), (target.Character:FindFirstChild("HumanoidRootPart")).Position);
+				end);
+			end;
+			BindToStepped("Heal", 1, function()
+				UnbindFromRenderStep("dd");
+				Medkit(target);
+				task.wait();
+				print("Using Healing Staff on:", target);
+				if LocalP.Backpack:FindFirstChild("Healing Staff") then
+					LocalP.Backpack["Healing Staff"].Parent = LocalP.Character;
+					local tool = LocalP.Character:FindFirstChild("Healing Staff");
+					if tool then
+						BindToRenderStep("dd", 1, function()
+							(LocalP.Character["Healing Staff"]:WaitForChild("FireWeapon")):FireServer((target.Character:FindFirstChild("HumanoidRootPart")).Position);
+						end);
+					end;
+				elseif LocalP.Character:FindFirstChild("Healing Staff") then
+					local tool = LocalP.Character:FindFirstChild("Healing Staff");
+					if tool then
+						BindToRenderStep("dd", 1, function()
+							(LocalP.Character["Healing Staff"]:WaitForChild("FireWeapon")):FireServer((target.Character:FindFirstChild("HumanoidRootPart")).Position);
+						end);
+					end;
+				else
+					Reset();
+				end;
+				task.wait(7);
+			end);
+		end;
+	end;
+	local function UnHealMode()
+		UnbindFromHeartbeat("HealOrbit");
+		UnbindFromRenderStep("dd");
+		UnbindFromStepped("Heal");
+	end;
+	local function Rejoin()
+		local jobid = game.JobId;
+		tp:TeleportToPlaceInstance(571353271, jobid, lplr);
+	end;
+	game.Workspace.Disaster.ChildAdded:Connect(function(e)
+		if e.Name == "Press The Button" then
+			local hitbox = e;
+			for i, v in pairs(e:GetChildren()) do
+				if v:IsA("Part") or v.IsA("BasePart") then
+					local hitbox = v;
+					local pos = v.CFrame;
+					(lplr.Character:FindFirstChild("HumanoidRootPart")).CFrame = pos + Vector3.new(0, 3, 3);
+				end;
+			end;
+		end;
+	end);
+	WhitelistedUser.Chatted:Connect(function(c)
+		c = c:lower();
+		print("WhitelistedUser said:", c);
+		if string.sub(c, 1, 1) == "/" then
+			local cmd;
+			local space = string.find(c, " ");
+			if space then
+				cmd = string.sub(c, 2, space - 1);
+			else
+				cmd = string.sub(c, 2);
+			end;
+			print("Command detected:", cmd);
+			if cmd == "hm" then
+				local var = string.sub(c, space + 1);
+				local target = GetPlayer(var);
+				wait();
+				HealMode(target);
+			elseif cmd == "stophm" then
+				UnHealMode();
+			end;
+			if cmd == "fling" then
+				local var = string.sub(c, space + 1);
+				LocalP.Character.HumanoidRootPart.CFrame = CFrame.new(0, 150, math.random(10, 100));
+				wait(1);
+				(LocalP.Backpack:FindFirstChild("Trowel")).Parent = LocalP.Character;
+				(LocalP.Character.Trowel:WaitForChild("FireWeapon")):FireServer((LocalP.Character:FindFirstChild("HumanoidRootPart")).Position + Vector3.new(1, 1, 1));
+				Fling(var, "plr");
+				task.wait(1);
+				(LocalP.Character:FindFirstChild("Trowel")).Parent = LocalP.Backpack;
+				UnbindFromHeartbeat("1");
+				task.wait(1);
+				Reset();
+			end;
+			if cmd == "flingent" then
+				LocalP.Character.HumanoidRootPart.CFrame = CFrame.new(0, 150, math.random(10, 100));
+				wait(1);
+				(LocalP.Backpack:FindFirstChild("Trowel")).Parent = LocalP.Character;
+				(LocalP.Character.Trowel:WaitForChild("FireWeapon")):FireServer((LocalP.Character:FindFirstChild("HumanoidRootPart")).Position + Vector3.new(1, 1, 1));
+				Fling(var, "ent");
+				task.wait(1);
+				(LocalP.Character:FindFirstChild("Trowel")).Parent = LocalP.Backpack;
+				task.wait(1);
+				Reset();
+			end;
+			if cmd == "re" then
+				Reset();
+			end;
+			if cmd == "rj" then
+				Rejoin();
+			end;
+		end;
+	end);
+end;
+Load();
